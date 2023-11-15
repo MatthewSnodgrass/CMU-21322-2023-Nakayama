@@ -5,6 +5,7 @@ import «Nakayama».Basic
 import Mathlib.Tactic
 import Mathlib.RingTheory.Finiteness
 import Mathlib.RingTheory.Ideal.Operations
+import Mathlib.Algebra.Group.Defs
 
 def invertible [CommRing A] (x : A) : Prop := ∃ u : A, u * x = 1
 
@@ -57,14 +58,19 @@ lemma AvoidMaxInv [CommRing A] (x : A) : (∀ (I : Ideal A), ((Ideal.IsMaximal I
       exact Ideal.IsPrime.ne_top'
     exact ohno2 ohno
 
-lemma JacobsonIsIntersection [CommRing A] (x : A) :
-        (∀ y : A, ∃ u : A, u * (1 - x * y) = 1) ↔
-        x ∈ (Ideal.jacobson 0) := by
+lemma JacobsonIsIntersection [CommRing A] (x : A) : (∀ y : A, ∃ u : A, u * (1 - x * y) = 1) ↔
+  x ∈ (Ideal.jacobson 0) := by
   constructor
   · intro hx
     unfold Ideal.jacobson
     simp
-
+    intro m hm
+    by_contra h
+    have fact : ∃ a : A, ∃ b : m, a * x + b = 1 := by
+      have fact2 : 1 ∈ (Ideal.span {x}) + m := by
+        sorry
+      apply?
+    sorry
   · intro hx
     unfold Ideal.jacobson at hx
     simp at hx
@@ -82,27 +88,26 @@ lemma JacobsonIsIntersection [CommRing A] (x : A) :
       exact ohno2 ohno
     apply by_contradiction
     intro hx'
-    push_neg at hx'
-    have proper : Ideal.span {1 - x * y} ≠ ⊤ := by
-      rw[Ideal.ne_top_iff_one (Ideal.span {1 - x * y})]
-      intro h
-      have xUnit : ∃ u : A, u * (1 - x * y) = 1 := by
-        exact Ideal.mem_span_singleton'.mp h
-      rcases xUnit with ⟨u, hu⟩
-      exact hx' u hu
+    have inv : invertible (1 - x * y) := by
+      rw[← AvoidMaxInv]
+      exact key
+    exact hx' inv
 
-theorem CayleyHamilton [CommRing A]
-  [AddCommGroup M] [Module A M] [Module.Finite A M] (I : Ideal A)
-  (f : Module.End A M) (hfI : LinearMap.range f ≤ I • ⊤) :
+theorem CayleyHamilton [CommRing A] [AddCommGroup M] [Module A M] [Module.Finite A M]
+  (I : Ideal A) (f : Module.End A M) (hfI : LinearMap.range f ≤ I • ⊤) :
   ∃ p : Polynomial A, Polynomial.Monic p ∧ ∀ k : ℕ,
-  Polynomial.coeff p k ∈ I ^ ((Polynomial.natDegree p) - k) ∧
-  (↑(Polynomial.aeval f) p = 0) := by
+  Polynomial.coeff p k ∈ I ^ ((Polynomial.natDegree p) - k) ∧ ((Polynomial.aeval f) p = 0) := by
   sorry
 
-theorem Nakayama [CommRing A]
-  [AddCommGroup M] [Module A M] (hM : Submodule.FG ⊤) (I : Ideal A) (hIM : M = I • M) : ∃ a ∈ I, ∀ x : M, a • x = x := by
+theorem Nakayama [CommRing A] [AddCommGroup M] [Module A M] (hM : Submodule.FG ⊤)
+  (I : Ideal A) (hIM : ⊤ = (I • ⊤)) : ∃ a ∈ I, ∀ x : M, a • x = x := by
   rcases hM with ⟨s, hs⟩
+  have fact : ∃ p : Polynomial A, Polynomial.Monic p ∧ ∀ k : ℕ,
+  Polynomial.coeff p k ∈ I ^ ((Polynomial.natDegree p) - k) ∧
+  ((Polynomial.aeval (Mod_.id M)) p = 0)
 
-theorem Nakayama2 [CommRing A] [AddCommGroup M] [Module A M] [ModuleFinite A M]
+theorem Nakayama2 [CommRing A] [AddCommGroup M] [Module A M] [Module.Finite A M] (I : Ideal A)
+  (hI : I ≤ Ideal.jacobson 0) (hIM : ⊤ = I • M) : ∀ x : M, x = 0 := by
+  sorry
 
 #check Submodule.exists_sub_one_mem_and_smul_eq_zero_of_fg_of_le_smul
