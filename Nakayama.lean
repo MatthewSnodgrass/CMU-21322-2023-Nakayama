@@ -8,6 +8,17 @@ import Mathlib.RingTheory.Ideal.Operations
 
 def invertible [CommRing A] (x : A) : Prop := ∃ u : A, u * x = 1
 
+lemma Lemma1 [CommRing A] (x : A) (m : Ideal A) (hm : Ideal.IsMaximal m) :
+  x ∈ m → ¬(1 - x ∈ m) := by
+  intro h h'
+  have fact : m = ⊤ := by
+    rw[Ideal.eq_top_iff_one m]
+    have comp : 1 = x + (1 - x) := by exact eq_add_of_sub_eq' rfl
+    rw[comp]
+    exact Ideal.add_mem m h h'
+  have fact2 : m ≠ ⊤ := Ideal.IsPrime.ne_top'
+  exact fact2 fact
+
 lemma GenRingInv [CommRing A] (x : A) : Ideal.span {x} = ⊤ ↔ (invertible x) := by
   constructor
   · intro hx
@@ -19,6 +30,8 @@ lemma GenRingInv [CommRing A] (x : A) : Ideal.span {x} = ⊤ ↔ (invertible x) 
     rcases hx with ⟨u, hu⟩
     refine Ideal.mem_span_singleton.mpr ?mpr.intro.a
     use u
+    rw[← hu]
+    exact mul_comm u x
 
 lemma AvoidMaxInv [CommRing A] (x : A) : (∀ (I : Ideal A), ((Ideal.IsMaximal I) →
   ¬(x ∈ I))) ↔ (invertible x) := by
@@ -51,9 +64,7 @@ lemma JacobsonIsIntersection [CommRing A] (x : A) :
   · intro hx
     unfold Ideal.jacobson
     simp
-    intro m hm
-    apply by_contradiction
-    intro hx2
+
   · intro hx
     unfold Ideal.jacobson at hx
     simp at hx
@@ -80,10 +91,6 @@ lemma JacobsonIsIntersection [CommRing A] (x : A) :
       rcases xUnit with ⟨u, hu⟩
       exact hx' u hu
 
-
-lemma DetMod1 [CommRing A] : true := by
-  sorry
-
 theorem CayleyHamilton [CommRing A]
   [AddCommGroup M] [Module A M] [Module.Finite A M] (I : Ideal A)
   (f : Module.End A M) (hfI : LinearMap.range f ≤ I • ⊤) :
@@ -92,12 +99,10 @@ theorem CayleyHamilton [CommRing A]
   (↑(Polynomial.aeval f) p = 0) := by
   sorry
 
-
 theorem Nakayama [CommRing A]
-  [AddCommGroup M] [Module A M] {I : Ideal A} (hIM : M = I • M) :
-  ∃ a ∈ I, ∀ x : M, a • x = x := by
-  sorry
+  [AddCommGroup M] [Module A M] (hM : Submodule.FG ⊤) (I : Ideal A) (hIM : M = I • M) : ∃ a ∈ I, ∀ x : M, a • x = x := by
+  rcases hM with ⟨s, hs⟩
 
-theorem Nakayama2 [CommRing A]
+theorem Nakayama2 [CommRing A] [AddCommGroup M] [Module A M] [ModuleFinite A M]
 
 #check Submodule.exists_sub_one_mem_and_smul_eq_zero_of_fg_of_le_smul
