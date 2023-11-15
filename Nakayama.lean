@@ -123,6 +123,7 @@ theorem Nakayama [CommRing A] [AddCommGroup M] [Module A M] [Module.Finite A M]
   use (1 - (Polynomial.eval 1 p))
   constructor
   · rw[eval_eq_sum_range]
+    have manip : Finset.sum (Finset.range (natDegree p + 1)) fun i => coeff p i * 1 ^ i = 1 + Finset.sum (Finset.range (natDegree p)) fun i => coeff p i * 1 ^ i
     sorry
   · intro x
     have fact₁ : Polynomial.aeval (1 : Module.End A M) p = (Polynomial.eval 1 p) • (1 : Module.End A M) := by
