@@ -104,10 +104,9 @@ theorem Nakayama [CommRing A] [AddCommGroup M] [Module A M] (hM : Submodule.FG �
   rcases hM with ⟨s, hs⟩
   have fact : ∃ p : Polynomial A, Polynomial.Monic p ∧ ∀ k : ℕ,
   Polynomial.coeff p k ∈ I ^ ((Polynomial.natDegree p) - k) ∧
-  ((Polynomial.aeval (Mod_.id M)) p = 0)
+  ((Polynomial.aeval (Mod_.id M)) p = 0) := by sorry
+  sorry
 
 theorem Nakayama2 [CommRing A] [AddCommGroup M] [Module A M] [Module.Finite A M] (I : Ideal A)
   (hI : I ≤ Ideal.jacobson 0) (hIM : ⊤ = I • M) : ∀ x : M, x = 0 := by
   sorry
-
-#check Submodule.exists_sub_one_mem_and_smul_eq_zero_of_fg_of_le_smul
