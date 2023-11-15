@@ -9,6 +9,14 @@ import Mathlib.Algebra.Group.Defs
 
 def invertible [CommRing A] (x : A) : Prop := ∃ u : A, u * x = 1
 
+lemma Easy [CommRing A] [AddCommGroup M] [Module A M] (a : A) (ha : invertible a) (x : M) (hax : a • x = 0) : x = 0 := by
+  rcases ha with ⟨b, hb⟩
+  calc x = (1 : A) • x := by exact (one_smul A x).symm
+  _ = (b * a) • x := by rw[hb]
+  _ = b • (a • x) := mul_smul b a x
+  _ = b • (0 : M) := by rw[hax]
+  _ = 0 := smul_zero b
+
 lemma Lemma1 [CommRing A] (x : A) (m : Ideal A) (hm : Ideal.IsMaximal m) :
   x ∈ m → ¬(1 - x ∈ m) := by
   intro h h'
@@ -68,6 +76,7 @@ lemma JacobsonIsIntersection [CommRing A] (x : A) : (∀ y : A, ∃ u : A, u * (
     by_contra h
     have fact : ∃ a : A, ∃ b : m, a * x + b = 1 := by
       have fact2 : 1 ∈ (Ideal.span {x}) + m := by
+        rw[← Ideal.eq_top_iff_one ((Ideal.span {x}) + m)]
         sorry
       apply?
     sorry
@@ -93,20 +102,54 @@ lemma JacobsonIsIntersection [CommRing A] (x : A) : (∀ y : A, ∃ u : A, u * (
       exact key
     exact hx' inv
 
+open Set
+
 theorem CayleyHamilton [CommRing A] [AddCommGroup M] [Module A M] [Module.Finite A M]
   (I : Ideal A) (f : Module.End A M) (hfI : LinearMap.range f ≤ I • ⊤) :
-  ∃ p : Polynomial A, Polynomial.Monic p ∧ ∀ k : ℕ,
-  Polynomial.coeff p k ∈ I ^ ((Polynomial.natDegree p) - k) ∧ ((Polynomial.aeval f) p = 0) := by
+  ∃ p : Polynomial A, Polynomial.Monic p ∧ (∀ k : ℕ,
+  Polynomial.coeff p k ∈ I ^ ((Polynomial.natDegree p) - k)) ∧ ((Polynomial.aeval f) p = 0) := by
+  rcases (Module.Finite.exists_fin : ∃ (n : ℕ) (s : Fin n → M), Submodule.span A (range s) = ⊤) with ⟨n, s, hs⟩
   sorry
 
-theorem Nakayama [CommRing A] [AddCommGroup M] [Module A M] (hM : Submodule.FG ⊤)
-  (I : Ideal A) (hIM : ⊤ = (I • ⊤)) : ∃ a ∈ I, ∀ x : M, a • x = x := by
-  rcases hM with ⟨s, hs⟩
-  have fact : ∃ p : Polynomial A, Polynomial.Monic p ∧ ∀ k : ℕ,
-  Polynomial.coeff p k ∈ I ^ ((Polynomial.natDegree p) - k) ∧
-  ((Polynomial.aeval (Mod_.id M)) p = 0) := by sorry
-  sorry
+open Polynomial
+
+theorem Nakayama [CommRing A] [AddCommGroup M] [Module A M] [Module.Finite A M]
+  (I : Ideal A) (hIM : (⊤ : Submodule A M) = (I • ⊤)) : ∃ a ∈ I, ∀ x : M, a • x = x := by
+  have fact : ∃ p : A[X], Polynomial.Monic p ∧ (∀ k : ℕ, Polynomial.coeff p k ∈ I ^ ((Polynomial.natDegree p) - k)) ∧
+  ((Polynomial.aeval (1 : Module.End A M)) p = 0) := by
+    apply CayleyHamilton
+    exact LinearMap.range_le_iff_comap.mpr (id hIM.symm)
+  rcases fact with ⟨p, hp⟩
+  use (1 - (Polynomial.eval 1 p))
+  constructor
+  · rw[eval_eq_sum_range]
+    sorry
+  · intro x
+    have fact₁ : Polynomial.aeval (1 : Module.End A M) p = (Polynomial.eval 1 p) • (1 : Module.End A M) := by
+      have := aeval_algebraMap_apply_eq_algebraMap_eval (A := Module.End A M) (1 : A) p
+      simp at this
+      exact this
+    have fact : (1 - (Polynomial.eval 1 p)) • x = (1 - (Polynomial.aeval (1 : Module.End A M) p)) • x := by
+      rw [fact₁]
+      simp [sub_smul]
+    rw[fact]
+    simp
+    rw[hp.right.right]
+    exact rfl
 
 theorem Nakayama2 [CommRing A] [AddCommGroup M] [Module A M] [Module.Finite A M] (I : Ideal A)
-  (hI : I ≤ Ideal.jacobson 0) (hIM : ⊤ = I • M) : ∀ x : M, x = 0 := by
-  sorry
+  (hI : I ≤ Ideal.jacobson 0) (hIM : (⊤ : Submodule A M) = (I • ⊤)) : ∀ x : M, x = 0 := by
+  have fact := Nakayama I hIM
+  rcases fact with ⟨a, ha⟩
+  have fact₁ : a ∈ Ideal.jacobson 0 := by
+    apply hI
+    exact ha.left
+  rw[← JacobsonIsIntersection a] at fact₁
+  specialize fact₁ 1
+  simp at fact₁
+  intro x
+  have ax : (1 - a) • x = 0 := by
+    calc (1 - a) • x = (1 : A) • x - a • x := by exact sub_smul 1 a x
+    _ = x - a • x := by simp
+    _ = 0 := by simp[ha.right x]
+  exact Easy (1 - a) fact₁ x ax
