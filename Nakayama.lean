@@ -74,12 +74,20 @@ lemma JacobsonIsIntersection [CommRing A] (x : A) : (∀ y : A, ∃ u : A, u * (
     simp
     intro m hm
     by_contra h
-    have fact : ∃ a : A, ∃ b : m, a * x + b = 1 := by
-      have fact2 : 1 ∈ (Ideal.span {x}) + m := by
-        rw[← Ideal.eq_top_iff_one ((Ideal.span {x}) + m)]
-        sorry
-      apply?
-    sorry
+    have fact := Ideal.IsMaximal.exists_inv hm h
+    rcases fact with ⟨y, i, hiy⟩
+    have fact₁ : 1 - x * y ∈ m := by
+      calc 1 - x * y = i := by {
+        rw[← hiy.right]
+        ring
+      }
+      _ ∈ m := hiy.left
+    specialize hx y
+    rcases hx with ⟨u, hu⟩
+    have fact₂ : u * (1 - x * y) ∈ m := by
+      exact Ideal.mul_mem_left m u fact₁
+    rw[hu] at fact₂
+    exact Ideal.IsPrime.ne_top' ((Ideal.eq_top_iff_one m).mpr fact₂)
   · intro hx
     unfold Ideal.jacobson at hx
     simp at hx
@@ -102,40 +110,45 @@ lemma JacobsonIsIntersection [CommRing A] (x : A) : (∀ y : A, ∃ u : A, u * (
       exact key
     exact hx' inv
 
-open Set
+open Set Polynomial BigOperators Finset
 
 theorem CayleyHamilton [CommRing A] [AddCommGroup M] [Module A M] [Module.Finite A M]
   (I : Ideal A) (f : Module.End A M) (hfI : LinearMap.range f ≤ I • ⊤) :
-  ∃ p : Polynomial A, Polynomial.Monic p ∧ (∀ k : ℕ,
-  Polynomial.coeff p k ∈ I ^ ((Polynomial.natDegree p) - k)) ∧ ((Polynomial.aeval f) p = 0) := by
-  rcases (Module.Finite.exists_fin : ∃ (n : ℕ) (s : Fin n → M), Submodule.span A (range s) = ⊤) with ⟨n, s, hs⟩
-  sorry
-
-open Polynomial
+  ∃ p : Polynomial A, Monic p ∧ (∀ k : ℕ,
+  coeff p k ∈ I ^ ((natDegree p) - k)) ∧ ((aeval f) p = 0) := by
+  apply LinearMap.exists_monic_and_coeff_mem_pow_and_aeval_eq_zero_of_range_le_smul
+  exact hfI
 
 theorem Nakayama [CommRing A] [AddCommGroup M] [Module A M] [Module.Finite A M]
   (I : Ideal A) (hIM : (⊤ : Submodule A M) = (I • ⊤)) : ∃ a ∈ I, ∀ x : M, a • x = x := by
-  have fact : ∃ p : A[X], Polynomial.Monic p ∧ (∀ k : ℕ, Polynomial.coeff p k ∈ I ^ ((Polynomial.natDegree p) - k)) ∧
-  ((Polynomial.aeval (1 : Module.End A M)) p = 0) := by
+  have fact : ∃ p : A[X], Monic p ∧ (∀ k : ℕ, coeff p k ∈ I ^ ((natDegree p) - k)) ∧
+  ((aeval (1 : Module.End A M)) p = 0) := by
     apply CayleyHamilton
     exact LinearMap.range_le_iff_comap.mpr (id hIM.symm)
-  rcases fact with ⟨p, hp⟩
-  use (1 - (Polynomial.eval 1 p))
+  rcases fact with ⟨p, p_monic, p_coeff, p_one⟩
+  use (1 - (eval 1 p))
   constructor
-  · rw[eval_eq_sum_range]
-    have manip : Finset.sum (Finset.range (natDegree p + 1)) fun i => coeff p i * 1 ^ i = 1 + Finset.sum (Finset.range (natDegree p)) fun i => coeff p i * 1 ^ i
-    sorry
+  · rw [eval_eq_sum_range, sum_range_succ]
+    simp [p_monic]
+    apply Ideal.sum_mem
+    intro c hc
+    have easy : c < natDegree p := by exact List.mem_range.mp hc
+    have key : I ^ (natDegree p - c) ≤ I := by
+      refine Ideal.pow_le_self ?hn
+      exact Nat.sub_ne_zero_of_lt easy
+    apply key
+    exact p_coeff c
   · intro x
-    have fact₁ : Polynomial.aeval (1 : Module.End A M) p = (Polynomial.eval 1 p) • (1 : Module.End A M) := by
+    have fact₁ : aeval (1 : Module.End A M) p = (eval 1 p) • (1 : Module.End A M) := by
       have := aeval_algebraMap_apply_eq_algebraMap_eval (A := Module.End A M) (1 : A) p
       simp at this
       exact this
-    have fact : (1 - (Polynomial.eval 1 p)) • x = (1 - (Polynomial.aeval (1 : Module.End A M) p)) • x := by
+    have fact : (1 - (eval 1 p)) • x = (1 - (aeval (1 : Module.End A M) p)) • x := by
       rw [fact₁]
       simp [sub_smul]
     rw[fact]
-    simp
-    rw[hp.right.right]
+    simp only [LinearMap.smul_def, LinearMap.sub_apply, LinearMap.one_apply, sub_eq_self]
+    rw[p_one]
     exact rfl
 
 theorem Nakayama2 [CommRing A] [AddCommGroup M] [Module A M] [Module.Finite A M] (I : Ideal A)
@@ -151,6 +164,6 @@ theorem Nakayama2 [CommRing A] [AddCommGroup M] [Module A M] [Module.Finite A M]
   intro x
   have ax : (1 - a) • x = 0 := by
     calc (1 - a) • x = (1 : A) • x - a • x := by exact sub_smul 1 a x
-    _ = x - a • x := by simp
+    _ = x - a • x := by simp only [one_smul]
     _ = 0 := by simp[ha.right x]
   exact Easy (1 - a) fact₁ x ax
